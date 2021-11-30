@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "stdlib.h"
 #include "string.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +51,10 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint16_t adc_memory[ADC_LENGTH] = {0};
+uint32_t adc_memory[ADC_LENGTH] = {0};
+uint8_t str[10]  = "help";
+uint8_t end[ 2] = "\r\n";
+uint8_t uart_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,22 +72,46 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	HAL_GPIO_WritePin(ADC_timer_GPIO_Port, ADC_timer_Pin, GPIO_PIN_SET);
 	HAL_ADC_Start(&hadc3);
 	HAL_ADC_PollForConversion(&hadc3, 1);
 
 	adc_memory[0] = HAL_ADC_GetValue(&hadc3);
 
 	/* Code voor sensor hier */
+	adc_memory[0] = adc_memory[0] * 100;
 
-	char str[6] = "000000";
-	char end[2] = "\r\n";
-	itoa(adc_memory[0], str, 10);
+	itoa(adc_memory[0], (char *)str, 10);
 
-	HAL_UART_Transmit(&huart3, (uint8_t* )str, strlen(str), 1);
-	HAL_UART_Transmit(&huart3, (uint8_t* )end, strlen(end), 1);
+	//shift numbers for decimal point
+	uint16_t i = strlen((char *)str);
+	memcpy(&str[i-1], &str[i-2], 2);
+	str[i-2] = '.';
 
+	if(uart_flag == 0)
+	{
+		HAL_UART_Transmit_IT(&huart3, str, strlen((char *)str));
+		uart_flag = 1;
+	}
+	if(uart_flag == 2)
+	{
+		HAL_UART_Transmit_IT(&huart3, end, 2);
+		uart_flag = 3;
+	}
+	HAL_GPIO_WritePin(ADC_timer_GPIO_Port, ADC_timer_Pin, GPIO_PIN_RESET);
 }
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(uart_flag == 1)
+	{
+		uart_flag = 2;
+	}
+	if(uart_flag == 3)
+	{
+		uart_flag = 0;
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -282,7 +310,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 60000;
+  htim1.Init.Period = 5500;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -410,6 +438,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(USB_FS_PWR_EN_GPIO_Port, USB_FS_PWR_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(ADC_timer_GPIO_Port, ADC_timer_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
@@ -437,6 +468,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USB_FS_OVCR_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ADC_timer_Pin */
+  GPIO_InitStruct.Pin = ADC_timer_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(ADC_timer_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_YELLOW_Pin */
   GPIO_InitStruct.Pin = LED_YELLOW_Pin;

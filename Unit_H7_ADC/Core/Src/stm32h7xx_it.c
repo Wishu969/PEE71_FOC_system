@@ -59,6 +59,7 @@
 extern ADC_HandleTypeDef hadc3;
 extern TIM_HandleTypeDef htim1;
 extern DMA_HandleTypeDef hdma_usart3_tx;
+extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -207,7 +208,7 @@ void SysTick_Handler(void)
 void DMA1_Stream0_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
-
+  HAL_UART_IRQHandler(&huart3);
   /* USER CODE END DMA1_Stream0_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart3_tx);
   /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
@@ -227,6 +228,20 @@ void TIM1_UP_IRQHandler(void)
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */
 
   /* USER CODE END TIM1_UP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  /* USER CODE END USART3_IRQn 1 */
 }
 
 /**
